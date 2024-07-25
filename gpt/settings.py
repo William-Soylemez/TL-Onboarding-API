@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from os import getenv
+from dotenv import load_dotenv
+
+# Load variables from a .env file, if present
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +30,7 @@ SECRET_KEY = 'django-insecure-m*ms7po7um1lc!@2p$1ts&q5o0icvq8rb*tpt7&d3*kb)=qk*t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['.vercel.app']
+ALLOWED_HOSTS = ['.vercel.app', 'localhost']
 
 
 # Application definition
@@ -80,10 +85,18 @@ WSGI_APPLICATION = 'gpt.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': getenv('PGDATABASE'),
+        'USER': getenv('PGUSER'),
+        'PASSWORD': getenv('PGPASSWORD'),
+        'HOST': getenv('PGHOST'),
+        'PORT': getenv('PGPORT', 5432),
+         'OPTIONS': {
+             'sslmode': 'require',
+        }
     }
 }
+
 
 
 # Password validation
@@ -136,7 +149,8 @@ CACHES = {
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5173"
+    "http://127.0.0.1:5173",
+    "vercel.app",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True

@@ -23,6 +23,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.test),
     path('prompt/', views.prompt),
+    path('add_message/', views.add_message),
+    path('get_messages/', views.get_messages),
+    path('get_conversations/', views.get_conversations),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

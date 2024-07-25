@@ -6,3 +6,14 @@ from django.db import models
 
 #     def __str__(self):
 #         return self.name
+
+class Conversation(models.Model):
+    conversation_id = models.AutoField(primary_key=True)
+    user_id = models.IntegerField()
+
+class Message(models.Model):
+    message_id = models.AutoField(primary_key=True)
+    conversation_id = models.ForeignKey(Conversation, on_delete=models.CASCADE)
+    is_user_entry = models.BooleanField()
+    contents = models.TextField()
+    
