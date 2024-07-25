@@ -150,7 +150,5 @@ CACHES = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
-    "vercel.app",
+    "https://your-vercel-app.vercel.app",
 ]
-
-CORS_ALLOW_ALL_ORIGINS = True
