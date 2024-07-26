@@ -10,6 +10,7 @@ from django.db import models
 class Conversation(models.Model):
     conversation_id = models.AutoField(primary_key=True)
     user_id = models.IntegerField()
+    name = models.CharField(max_length=100)
 
 class Message(models.Model):
     message_id = models.AutoField(primary_key=True)

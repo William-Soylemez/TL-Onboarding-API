@@ -25,6 +25,7 @@ urlpatterns = [
     path('prompt/', views.prompt),
     path('add_message/', views.add_message),
     path('get_messages/', views.get_messages),
+    path('add_conversation/', views.add_conversation),
     path('get_conversations/', views.get_conversations),
 ]
 

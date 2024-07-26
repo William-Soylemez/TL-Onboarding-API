@@ -143,12 +143,14 @@ def add_conversation(request, format=None):
     if request.method == 'POST':
         # Get the user ID from the request
         user_id = request.data.get('user_id')
-        if not user_id:
-            return Response({'message': 'User ID not given!'}, status=400)
+        name = request.data.get('name')
+        if not user_id or not name:
+            return Response({'message': 'Missing information!'}, status=400)
         
         # Create the conversation
-        conversation = Conversation(user_id=user_id)
+        conversation = Conversation(user_id=user_id, name=name)
         conversation.save()
-        return Response({'message': 'Conversation added!'})
+        conversation_data = ConversationSerializer(conversation).data
+        return Response({'message': 'Conversation added!', 'conversation': conversation_data})
 
     return Response({'message': 'Invalid request!'}, status=400)
