@@ -154,3 +154,16 @@ def add_conversation(request, format=None):
         return Response({'message': 'Conversation added!', 'conversation': conversation_data})
 
     return Response({'message': 'Invalid request!'}, status=400)
+
+@api_view(['DELETE'])
+def delete_conversation(request, format=None):
+    
+    conversation_id = request.query_params.get('conversation_id')
+    if not conversation_id:
+        return Response({'message': 'Conversation ID not given!'}, status=400)
+
+    conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+    if not conversation:
+        return Response({'message': 'Conversation not found!'}, status=400)
+    conversation.delete()
+    return Response({'message': 'Conversation deleted!'})
