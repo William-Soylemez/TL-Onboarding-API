@@ -1,16 +1,23 @@
 from django.core.cache import cache
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 import requests
 import os
 from .models import Conversation, Message
-from .serializers import ConversationSerializer, MessageSerializer
+from .serializers import ConversationSerializer, MessageSerializer, UserSerializer
+
+from rest_framework.authtoken.models import Token
+from django.contrib.auth.models import User
 
 @api_view(['GET'])
 def test(request, format=None):
     return Response({'message': 'Hello, world!'})
 
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def prompt(request, format=None):
     
     if request.method == 'POST':
@@ -29,6 +36,13 @@ def prompt(request, format=None):
         conversation_id = request.data.get('conversation_id')
         if not conversation_id:
             return Response({'message': 'Conversation ID not found!'}, status=400)
+        
+        # Confirm that conversation belongs to user
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return Response({'message': 'Conversation not found!'}, status=400)
+        if conversation.user_id != request.user.id:
+            return Response({'message': 'Conversation does not belong to user!'}, status=400)
 
         add_message_success = add_message(conversation_id, True, prompt)
         if not add_message_success:
@@ -97,11 +111,20 @@ def reauthenticate():
 
 ################# MESSAGES #################
 
-@api_view(['GET'])
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def get_messages(request, format=None):
     conversation_id = request.query_params.get('conversation_id')
     if not conversation_id:
         return Response({'message': 'Conversation ID not given!'}, status=400)
+    
+    # Confirm that conversation belongs to user
+    conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+    if not conversation:
+        return Response({'message': 'Conversation not found!'}, status=400)
+    if conversation.user_id != request.user.id:
+        return Response({'message': 'Conversation does not belong to user!'}, status=400)
 
     # Get the messages
     messages = Message.objects.filter(conversation_id=conversation_id)
@@ -125,9 +148,11 @@ def add_message(conversation_id, is_user_entry, contents, format=None):
 
 ################# CONVERSATIONS #################
 
-@api_view(['GET'])
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def get_conversations(request, format=None):
-    user_id = request.query_params.get('user_id')
+    user_id = request.user.id
     if not user_id:
         return Response({'message': 'User ID not given!'}, status=400)
 
@@ -139,10 +164,12 @@ def get_conversations(request, format=None):
     return Response(serializer.data)
 
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def add_conversation(request, format=None):
     if request.method == 'POST':
         # Get the user ID from the request
-        user_id = request.data.get('user_id')
+        user_id = request.user.id
         name = request.data.get('name')
         if not user_id or not name:
             return Response({'message': 'Missing information!'}, status=400)
@@ -155,15 +182,64 @@ def add_conversation(request, format=None):
 
     return Response({'message': 'Invalid request!'}, status=400)
 
-@api_view(['DELETE'])
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def delete_conversation(request, format=None):
     
     conversation_id = request.query_params.get('conversation_id')
     if not conversation_id:
         return Response({'message': 'Conversation ID not given!'}, status=400)
+    
+    # Confirm that conversation belongs to user
+    conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+    if not conversation:
+        return Response({'message': 'Conversation not found!'}, status=400)
+    if conversation.user_id != request.user.id:
+        return Response({'message': 'Conversation does not belong to user!'}, status=400)
 
     conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
     if not conversation:
         return Response({'message': 'Conversation not found!'}, status=400)
     conversation.delete()
     return Response({'message': 'Conversation deleted!'})
+
+
+########################### AUTHENTICATION ###########################
+
+@api_view(['POST'])
+def login(request):
+    password = request.data.get('password')
+    username = request.data.get('username')
+    if not password or not username:
+        return Response({'message': 'Missing information!'}, status=400)
+
+    user = User.objects.get(username=username)
+    if not user:
+        return Response({'message': 'User not found!'}, status=404)
+    if not user.check_password(password):
+        return Response({'message': 'User not found!'}, status=404)
+
+    token, created = Token.objects.get_or_create(user=user)
+    serializer = UserSerializer(instance=user)
+
+    return Response({'token': token.key, "user": serializer.data})
+
+@api_view(['POST'])
+def signup(request):
+    serializer = UserSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        user = User.objects.get(username=request.data['username'])
+        user.set_password(request.data['password'])
+        user.save()
+        token = Token.objects.create(user=user)
+        return Response({'token': token.key, "user": serializer.data})
+
+    return Response({'message': 'Invalid request!', "errors": serializer.errors}, status=400)
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def test_token(request):
+    return Response({'message': 'Token is valid!', 'user': request.user.username})

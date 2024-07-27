@@ -28,6 +28,9 @@ urlpatterns = [
     path('add_conversation/', views.add_conversation),
     path('get_conversations/', views.get_conversations),
     path('delete_conversation/', views.delete_conversation),
+    path('login/', views.login),
+    path('signup/', views.signup),
+    path('test_token/', views.test_token),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
